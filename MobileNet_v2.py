@@ -63,6 +63,8 @@ class DetailedLoggingCallback(Callback):
         print(cm_test)
         print("Classification Report (Test):")
         print(report_test)
+        self.epoch_cm_logs.append((epoch + 1, cm_test))
+        self.epoch_report.append((epoch + 1, report_test))
         # Save information to temporary list with values separated by tab
         self.epoch_logs.append(
             (
@@ -97,7 +99,7 @@ class DetailedLoggingCallback(Callback):
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 NUM_CLASSES = 5
-EPOCHS = 70
+EPOCHS = 1
 # Create paths to data directories
 train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
@@ -142,7 +144,7 @@ train_datagen = ImageDataGenerator(
     shear_range=0.2,
     zoom_range=0.2,
     vertical_flip=True,
-    horizontal_flip=False,
+    horizontal_flip=True,
     fill_mode="nearest",
 )
 
@@ -168,7 +170,7 @@ history = model.fit(
 )
 
 
-model.save("./MobileNet.h5")
+model.save("./MobileNet_v2.keras")
 
 
 # sử dụng MobileNet
