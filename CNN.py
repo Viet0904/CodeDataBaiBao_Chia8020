@@ -18,7 +18,7 @@ from tensorflow.keras.callbacks import Callback
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 NUM_CLASSES = 5
-EPOCHS = 1
+EPOCHS = 100
 
 # Get current time
 current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

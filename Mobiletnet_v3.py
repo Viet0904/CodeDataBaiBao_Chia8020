@@ -3,6 +3,7 @@ from tensorflow.keras.applications import MobileNet
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
+from sklearn.utils import class_weight
 from tensorflow.keras.optimizers import Adam
 import numpy as np
 import datetime
@@ -19,7 +20,7 @@ from sklearn.metrics import (
 
 
 class DetailedLoggingCallback(Callback):
-    def __init__(self, test_data, file_prefix="MobileNet_optAdam_lr0.001_bs32"):
+    def __init__(self, test_data, file_prefix="MobileNetv3_optAdam_lr0.001_bs32"):
         super(DetailedLoggingCallback, self).__init__()
         self.test_data = test_data
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -99,7 +100,7 @@ class DetailedLoggingCallback(Callback):
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 NUM_CLASSES = 5
-EPOCHS = 100
+EPOCHS = 1
 # Create paths to data directories
 train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
@@ -110,9 +111,9 @@ base_model = MobileNet(
 )
 
 
-# Freeze the layers of the base model
-for layer in base_model.layers:
-    layer.trainable = False
+# Mở đóng băng một số lớp cuối cùng của mô hình
+for layer in base_model.layers[-10:]:
+    layer.trainable = True
 
 
 # Add custom layers on top of the base model
@@ -138,7 +139,7 @@ model.compile(
 # Data preprocessing and augmentation
 train_datagen = ImageDataGenerator(
     rescale=1.0 / 255,
-    rotation_range=20,
+    rotation_range=30,
     width_shift_range=0.2,
     height_shift_range=0.2,
     shear_range=0.2,
@@ -161,6 +162,7 @@ test_data = test_datagen.flow_from_directory(
 )
 
 detailed_logging_callback = DetailedLoggingCallback(test_data=test_data)
+
 # Train the model
 history = model.fit(
     train_data,
@@ -170,7 +172,7 @@ history = model.fit(
 )
 
 
-model.save("./MobileNet_v2.keras")
+model.save("./MobileNet_v3.keras")
 
 
 # sử dụng MobileNet
