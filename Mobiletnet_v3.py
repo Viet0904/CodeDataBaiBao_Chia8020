@@ -131,7 +131,7 @@ model = models.Sequential(
 tf.keras.backend.clear_session()
 # Compile the model
 model.compile(
-    optimizer=Adam(learning_rate=0.001, decay=1e-5),
+    optimizer=Adam(learning_rate=0.001),
     loss="categorical_crossentropy",
     metrics=["accuracy", tf.keras.metrics.Precision(), tf.keras.metrics.Recall()],
 )
