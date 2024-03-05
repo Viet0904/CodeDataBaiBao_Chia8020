@@ -180,11 +180,12 @@ test_data = test_datagen.flow_from_directory(
 
 detailed_logging_callback = DetailedLoggingCallback(test_data=test_data)
 early_stopping_callback = EarlyStopping(
-    monitor="val_loss",
-    mode="min",
-    patience=PATIENCE,
-    restore_best_weights=True,
+    monitor="loss", 
+    mode="min",  
+    patience=PATIENCE,  
+    restore_best_weights=True, 
 )
+
 # Train the model
 history = model.fit(
     train_data,

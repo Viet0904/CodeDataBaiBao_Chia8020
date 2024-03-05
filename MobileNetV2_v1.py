@@ -172,11 +172,12 @@ test_data = test_datagen.flow_from_directory(
 
 detailed_logging_callback = DetailedLoggingCallback(test_data=test_data)
 early_stopping_callback = EarlyStopping(
-    monitor="val_loss",
-    mode="min",
-    patience=PATIENCE,
-    restore_best_weights=True,
+    monitor="loss",  # Đo lường dựa trên sự thay đổi của training loss
+    mode="min",  # Theo dõi sự giảm của loss
+    patience=PATIENCE,  # Số lượng epochs không có cải thiện mà bạn chấp nhận trước khi dừng huấn luyện
+    restore_best_weights=True,  # Khôi phục trọng số của mô hình tốt nhất
 )
+
 # Train the model
 history = model.fit(
     train_data,
