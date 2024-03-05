@@ -108,7 +108,7 @@ class DetailedLoggingCallback(Callback):
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 16
 NUM_CLASSES = 5
-EPOCHS = 1
+EPOCHS = 100
 LEARNING_RATE = 1e-5
 PATIENCE = 3
 # Create paths to data directories
