@@ -1,9 +1,9 @@
 import tensorflow as tf
-from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.applications import MobileNet
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
-from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.utils import class_weight
 from tensorflow.keras.optimizers import Adam
 import numpy as np
 import datetime
@@ -20,7 +20,7 @@ from sklearn.metrics import (
 
 
 class DetailedLoggingCallback(Callback):
-    def __init__(self, test_data, file_prefix="MobileNetV2_v3_optAdam_lr0.001_bs32"):
+    def __init__(self, test_data, file_prefix="MobileNet_v3_optAdam_lr0.001_bs32"):
         super(DetailedLoggingCallback, self).__init__()
         self.test_data = test_data
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -64,13 +64,6 @@ class DetailedLoggingCallback(Callback):
         print(cm_test)
         print("Classification Report (Test):")
         print(report_test)
-        print("Test Accuracy:", test_accuracy)
-        print("Test Loss:", test_loss)
-        print("Test Precision:", precision_test)
-        print("Test Recall:", recall_test)
-        print("Test F1-Score:", f1_test)
-        print("Test MCC:", mcc_test)
-        print("Test CMC:", cmc_test)
         self.epoch_cm_logs.append((epoch + 1, cm_test))
         self.epoch_report.append((epoch + 1, report_test))
         # Save information to temporary list with values separated by tab
@@ -108,39 +101,30 @@ IMG_SIZE = (224, 224)
 BATCH_SIZE = 16
 NUM_CLASSES = 5
 EPOCHS = 100
-LEARNING_RATE = 1e-5
 # Create paths to data directories
 train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
 
 # Load the MobileNet model pre-trained weights
-base_model = MobileNetV2(
+base_model = MobileNet(
     weights="imagenet", include_top=False, input_shape=(*IMG_SIZE, 3)
 )
 
 
-# Freeze the layers of the base model
-for layer in base_model.layers:
-    layer.trainable = False
+# Mở đóng băng một số lớp cuối cùng của mô hình
+for layer in base_model.layers[-10:]:
+    layer.trainable = True
 
 
 # Add custom layers on top of the base model
-
+# Chỉnh số lượng lớp của lớp cuối cùng từ 8 thành 5
+NUM_CLASSES = 5
 model = models.Sequential(
     [
         base_model,
-        layers.MaxPooling2D(),  # Add max pooling layer
-        layers.Dense(2048, activation="relu"),
-        layers.BatchNormalization(),  # Add batch normalization layer
         layers.GlobalAveragePooling2D(),
-        layers.Dropout(0.3),
         layers.Dense(1024, activation="relu"),
-        layers.BatchNormalization(),  # Add batch normalization layer
-        layers.Dropout(0.3),
-        layers.Dense(512, activation="relu"),  # Add additional dense layer
-        layers.BatchNormalization(),  # Add batch normalization layer
-        layers.Dropout(0.3),
-        layers.Dense(128, activation="relu"),  # Add additional dense layer
+        layers.Dropout(0.5),
         layers.Dense(NUM_CLASSES, activation="softmax"),
     ]
 )
@@ -155,13 +139,13 @@ model.compile(
 # Data preprocessing and augmentation
 train_datagen = ImageDataGenerator(
     rescale=1.0 / 255,
-    rotation_range=20,
+    rotation_range=30,
     width_shift_range=0.2,
     height_shift_range=0.2,
     shear_range=0.2,
     zoom_range=0.2,
     vertical_flip=True,
-    horizontal_flip=False,
+    horizontal_flip=True,
     fill_mode="nearest",
 )
 
@@ -188,7 +172,7 @@ history = model.fit(
 )
 
 
-model.save("./MobileNetV2_v3.keras")
+model.save("./MobileNet_v3.keras")
 
 
 # sử dụng MobileNet
