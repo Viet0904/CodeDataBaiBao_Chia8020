@@ -20,7 +20,7 @@ from sklearn.metrics import (
 
 
 class DetailedLoggingCallback(Callback):
-    def __init__(self, test_data, file_prefix="MobileNet_v3_v5_optAdam_lr0.001_bs32"):
+    def __init__(self, test_data, file_prefix="MobileNet_v3_v9_optAdam_lr0.001_bs32"):
         super(DetailedLoggingCallback, self).__init__()
         self.test_data = test_data
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -98,7 +98,7 @@ class DetailedLoggingCallback(Callback):
 
 
 IMG_SIZE = (224, 224)
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 NUM_CLASSES = 5
 EPOCHS = 100
 # Create paths to data directories
@@ -131,7 +131,7 @@ model = models.Sequential(
 tf.keras.backend.clear_session()
 # Compile the model
 model.compile(
-    optimizer=Adam(learning_rate=0.0001),
+    optimizer=Adam(learning_rate=0.001),
     loss="categorical_crossentropy",
     metrics=["accuracy", tf.keras.metrics.Precision(), tf.keras.metrics.Recall()],
 )
@@ -172,7 +172,7 @@ history = model.fit(
 )
 
 
-model.save("./MobileNet_v3_v5.keras")
+model.save("./MobileNet_v3_v9.keras")
 
 
 # sử dụng MobileNet
