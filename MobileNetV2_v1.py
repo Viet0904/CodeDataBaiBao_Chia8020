@@ -4,6 +4,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
 import numpy as np
 import datetime
 from tensorflow.keras.callbacks import Callback
@@ -106,7 +107,7 @@ class DetailedLoggingCallback(Callback):
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 16
 NUM_CLASSES = 5
-EPOCHS = 100
+EPOCHS = 1
 LEARNING_RATE = 1e-5
 PATIENCE = 3
 # Create paths to data directories

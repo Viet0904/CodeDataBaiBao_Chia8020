@@ -1,9 +1,8 @@
 import tensorflow as tf
-from tensorflow.keras.applications import MobileNet
+from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
-from sklearn.utils import class_weight
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.optimizers import Adam
 import numpy as np
@@ -21,7 +20,7 @@ from sklearn.metrics import (
 
 
 class DetailedLoggingCallback(Callback):
-    def __init__(self, test_data, file_prefix="MobileNet_baibao_optAdam_lr0.001_bs32"):
+    def __init__(self, test_data, file_prefix="MobileNetV2_v2_optAdam_lr0.001_bs32"):
         super(DetailedLoggingCallback, self).__init__()
         self.test_data = test_data
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -56,6 +55,11 @@ class DetailedLoggingCallback(Callback):
         f1_test = f1_score(y_true_test, y_pred_test, average="macro")
         mcc_test = matthews_corrcoef(y_true_test, y_pred_test)
         cmc_test = cohen_kappa_score(y_true_test, y_pred_test)
+
+        cm_test = confusion_matrix(y_true_test, y_pred_test)
+        report_test = classification_report(
+            y_true_test, y_pred_test, digits=5, output_dict=True
+        )
         print("Confusion Matrix (Test):")
         print(cm_test)
         print("Classification Report (Test):")
@@ -67,7 +71,6 @@ class DetailedLoggingCallback(Callback):
         print("Test F1-Score:", f1_test)
         print("Test MCC:", mcc_test)
         print("Test CMC:", cmc_test)
-
         self.epoch_cm_logs.append((epoch + 1, cm_test))
         self.epoch_report.append((epoch + 1, report_test))
         # Save information to temporary list with values separated by tab
@@ -104,7 +107,7 @@ class DetailedLoggingCallback(Callback):
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 16
 NUM_CLASSES = 5
-EPOCHS = 80
+EPOCHS = 1
 LEARNING_RATE = 1e-5
 PATIENCE = 3
 # Create paths to data directories
@@ -112,16 +115,19 @@ train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
 
 # Load the MobileNet model pre-trained weights
-base_model = MobileNet(
+base_model = MobileNetV2(
     weights="imagenet", include_top=False, input_shape=(*IMG_SIZE, 3)
 )
 
 
-# Mở đóng băng một số lớp cuối cùng của mô hình
+# Freeze the layers of the base model
 for layer in base_model.layers:
     layer.trainable = False
 
 
+# Add custom layers on top of the base model
+# Chỉnh số lượng lớp của lớp cuối cùng từ 8 thành 5
+NUM_CLASSES = 5
 model = models.Sequential(
     [
         base_model,
@@ -150,7 +156,7 @@ model.compile(
 # Data preprocessing and augmentation
 train_datagen = ImageDataGenerator(
     rescale=1.0 / 255,
-    rotation_range=30,
+    rotation_range=20,
     width_shift_range=0.2,
     height_shift_range=0.2,
     shear_range=0.2,
@@ -187,7 +193,8 @@ history = model.fit(
     callbacks=[detailed_logging_callback, early_stopping_callback],
 )
 
-model.save("./MobileNet_baibao.keras")
+
+model.save("./MobileNetV2_v2.keras")
 
 
 # sử dụng MobileNet
