@@ -1,13 +1,12 @@
 import tensorflow as tf
-from tensorflow.keras.applications import MobileNet
+from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
-from sklearn.utils import class_weight
+from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.optimizers import Adam
 import numpy as np
 import datetime
-from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.callbacks import Callback
 from sklearn.metrics import (
     precision_score,
@@ -21,7 +20,7 @@ from sklearn.metrics import (
 
 
 class DetailedLoggingCallback(Callback):
-    def __init__(self, test_data, file_prefix="MobileNet_v3_v4_optAdam_lr0.001_bs32"):
+    def __init__(self, test_data, file_prefix="MobileNetV2_v3_optAdam_lr0.001_bs32"):
         super(DetailedLoggingCallback, self).__init__()
         self.test_data = test_data
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -116,14 +115,14 @@ train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
 
 # Load the MobileNet model pre-trained weights
-base_model = MobileNet(
+base_model = MobileNetV2(
     weights="imagenet", include_top=False, input_shape=(*IMG_SIZE, 3)
 )
 
 
-# Mở đóng băng một số lớp cuối cùng của mô hình
-for layer in base_model.layers[-10:]:
-    layer.trainable = True
+# Freeze the layers of the base model
+for layer in base_model.layers:
+    layer.trainable = False
 
 
 # Add custom layers on top of the base model
@@ -132,23 +131,24 @@ model = models.Sequential(
     [
         base_model,
         layers.MaxPooling2D(),  # Add max pooling layer
-        layers.GlobalAveragePooling2D(),
+        layers.Dense(2048, activation="relu"),
         layers.BatchNormalization(),  # Add batch normalization layer
-        layers.Dropout(0.5),
+        layers.GlobalAveragePooling2D(),
+        layers.Dropout(0.3),
         layers.Dense(1024, activation="relu"),
         layers.BatchNormalization(),  # Add batch normalization layer
-        layers.Dropout(0.5),
+        layers.Dropout(0.3),
         layers.Dense(512, activation="relu"),  # Add additional dense layer
         layers.BatchNormalization(),  # Add batch normalization layer
-        layers.Dropout(0.5),
-        layers.Dense(256, activation="relu"),  # Add additional dense layer
+        layers.Dropout(0.3),
+        layers.Dense(128, activation="relu"),  # Add additional dense layer
         layers.Dense(NUM_CLASSES, activation="softmax"),
     ]
 )
 tf.keras.backend.clear_session()
 # Compile the model
 model.compile(
-    optimizer=Adam(learning_rate=LEARNING_RATE),
+    optimizer=Adam(learning_rate=0.0001),
     loss="categorical_crossentropy",
     metrics=["accuracy", tf.keras.metrics.Precision(), tf.keras.metrics.Recall()],
 )
@@ -156,13 +156,13 @@ model.compile(
 # Data preprocessing and augmentation
 train_datagen = ImageDataGenerator(
     rescale=1.0 / 255,
-    rotation_range=30,
+    rotation_range=20,
     width_shift_range=0.2,
     height_shift_range=0.2,
     shear_range=0.2,
     zoom_range=0.2,
     vertical_flip=True,
-    horizontal_flip=True,
+    horizontal_flip=False,
     fill_mode="nearest",
 )
 
@@ -185,6 +185,7 @@ early_stopping_callback = EarlyStopping(
     patience=PATIENCE,
     restore_best_weights=True,
 )
+
 # Train the model
 history = model.fit(
     train_data,
@@ -194,7 +195,7 @@ history = model.fit(
 )
 
 
-model.save("./MobileNet_v3_v4.keras")
+model.save("./MobileNetV2_v3.keras")
 
 
 # sử dụng MobileNet

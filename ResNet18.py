@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.applications import MobileNet
+from tensorflow.keras.applications import ResNet101
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
@@ -108,7 +108,7 @@ class DetailedLoggingCallback(Callback):
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 16
 NUM_CLASSES = 5
-EPOCHS = 100
+EPOCHS = 1
 LEARNING_RATE = 1e-5
 PATIENCE = 3
 # Create paths to data directories
@@ -116,10 +116,7 @@ train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
 
 # Load the MobileNet model pre-trained weights
-base_model = MobileNet(
-    weights="imagenet", include_top=False, input_shape=(*IMG_SIZE, 3)
-)
-
+base_model = ResNet101(weights="imagenet", include_top=False, input_shape=(*IMG_SIZE, 3))
 
 # Mở đóng băng một số lớp cuối cùng của mô hình
 for layer in base_model.layers[-10:]:
