@@ -107,7 +107,7 @@ class DetailedLoggingCallback(Callback):
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 16
 NUM_CLASSES = 5
-EPOCHS = 1
+EPOCHS = 100
 # Create paths to data directories
 train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
