@@ -167,7 +167,7 @@ model.compile(
 )
 history = model.fit(
     train_data,
-    epochs=10,
+    epochs=EPOCHS,
     validation_data=test_data,
     validation_steps=len(test_data),
     callbacks=[

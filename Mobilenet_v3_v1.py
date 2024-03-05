@@ -20,7 +20,7 @@ from sklearn.metrics import (
 
 
 class DetailedLoggingCallback(Callback):
-    def __init__(self, test_data, file_prefix="MobileNetv3_optAdam_lr0.001_bs32"):
+    def __init__(self, test_data, file_prefix="MobileNet_v3_v1_optAdam_lr0.001_bs32"):
         super(DetailedLoggingCallback, self).__init__()
         self.test_data = test_data
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -167,7 +167,7 @@ history = model.fit(
 )
 
 
-model.save("./MobileNet_v3.keras")
+model.save("./MobileNet_v3_v1.keras")
 
 
 # sử dụng MobileNet
