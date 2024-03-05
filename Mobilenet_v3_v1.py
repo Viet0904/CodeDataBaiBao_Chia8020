@@ -55,11 +55,6 @@ class DetailedLoggingCallback(Callback):
         f1_test = f1_score(y_true_test, y_pred_test, average="macro")
         mcc_test = matthews_corrcoef(y_true_test, y_pred_test)
         cmc_test = cohen_kappa_score(y_true_test, y_pred_test)
-        test_accuracy = logs.get("accuracy", 0)
-        cm_test = confusion_matrix(y_true_test, y_pred_test)
-        report_test = classification_report(
-            y_true_test, y_pred_test, digits=5, output_dict=True
-        )
         print("Confusion Matrix (Test):")
         print(cm_test)
         print("Classification Report (Test):")

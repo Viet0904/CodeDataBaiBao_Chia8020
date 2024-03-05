@@ -1,12 +1,8 @@
 import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.applications import ResNet50
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import numpy as np
 import datetime
-from tensorflow.keras.callbacks import Callback
 from sklearn.metrics import (
     precision_score,
     recall_score,
@@ -16,10 +12,20 @@ from sklearn.metrics import (
     matthews_corrcoef,
     cohen_kappa_score,
 )
+from tensorflow.keras.callbacks import Callback
+
+# Define necessary parameters
+IMG_SIZE = (224, 224)
+BATCH_SIZE = 32
+NUM_CLASSES = 5
+EPOCHS = 1
+
+# Get current time
+current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 class DetailedLoggingCallback(Callback):
-    def __init__(self, test_data, file_prefix="ResNet50_optAdam_lr0.001_bs32"):
+    def __init__(self, test_data, file_prefix="CNN_Kaggle_optAdam_lr0.001_bs32"):
         super(DetailedLoggingCallback, self).__init__()
         self.test_data = test_data
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -41,10 +47,12 @@ class DetailedLoggingCallback(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         logs = logs or {}
-        test_results = self.model.evaluate(self.test_data, verbose=0)
-        test_loss, test_accuracy = test_results[0], test_results[1]
-        y_pred_test = np.argmax(self.model.predict(self.test_data), axis=1)
-        y_true_test = self.test_data.classes
+        y_true_test = []
+        y_pred_test = []
+        for images, labels in self.test_data:
+            y_true_test.extend(np.argmax(labels.numpy(), axis=1))
+            y_pred_test.extend(np.argmax(self.model.predict(images), axis=1))
+
         cm_test = confusion_matrix(y_true_test, y_pred_test)
         report_test = classification_report(
             y_true_test, y_pred_test, digits=5, output_dict=True
@@ -54,24 +62,21 @@ class DetailedLoggingCallback(Callback):
         f1_test = f1_score(y_true_test, y_pred_test, average="macro")
         mcc_test = matthews_corrcoef(y_true_test, y_pred_test)
         cmc_test = cohen_kappa_score(y_true_test, y_pred_test)
-        cm_test = confusion_matrix(y_true_test, y_pred_test)
-        report_test = classification_report(
-            y_true_test, y_pred_test, digits=5, output_dict=True
-        )
+
         print("Confusion Matrix (Test):")
         print(cm_test)
         print("Classification Report (Test):")
         print(report_test)
+
         self.epoch_cm_logs.append((epoch + 1, cm_test))
         self.epoch_report.append((epoch + 1, report_test))
-        # Save information to temporary list with values separated by tab
         self.epoch_logs.append(
             (
                 epoch + 1,
                 logs.get("loss", 0),
                 logs.get("accuracy", 0),
-                test_loss,
-                test_accuracy,
+                logs.get("val_loss", 0),
+                logs.get("val_accuracy", 0),
                 precision_test,
                 recall_test,
                 f1_test,
@@ -95,85 +100,80 @@ class DetailedLoggingCallback(Callback):
                 f.write(f"{log[1]}\n\n")
 
 
-# Define necessary parameters
-
-IMG_SIZE = (224, 224)
-BATCH_SIZE = 32
-NUM_CLASSES = 5
-EPOCHS = 100
-
 # Create paths to data directories
 train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
 
-# Load the ResNet50 model pre-trained weights
-base_model = ResNet50(weights="imagenet", include_top=False, input_shape=(*IMG_SIZE, 3))
-
-# Freeze the layers of the base model
-for layer in base_model.layers:
-    layer.trainable = False
-
-# Add custom layers on top of the base model
-model = models.Sequential(
+data_augmentation = tf.keras.Sequential(
     [
-        base_model,
-        layers.GlobalAveragePooling2D(),
-        layers.Dense(1024, activation="relu"),
-        layers.Dropout(0.5),
-        layers.Dense(NUM_CLASSES, activation="softmax"),
+        tf.keras.layers.RandomFlip("horizontal", input_shape=(224, 224, 3)),
+        tf.keras.layers.RandomRotation(0.2),
+        tf.keras.layers.RandomZoom(0.2),
+        tf.keras.layers.RandomHeight(0.2),
+        tf.keras.layers.RandomWidth(0.2),
+        tf.keras.layers.Rescaling(1.0 / 255),
+    ],
+    name="data_augmentation",
+)
+train_data = (
+    tf.keras.preprocessing.image_dataset_from_directory(
+        directory=train_dir,
+        image_size=IMG_SIZE,
+        label_mode="categorical",
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+    )
+    .cache()
+    .shuffle(1000)
+    .prefetch(buffer_size=tf.data.AUTOTUNE)
+)
+
+test_data = (
+    tf.keras.preprocessing.image_dataset_from_directory(
+        directory=test_dir,
+        image_size=IMG_SIZE,
+        label_mode="categorical",
+        batch_size=BATCH_SIZE,
+    )
+    .cache()
+    .prefetch(buffer_size=tf.data.AUTOTUNE)
+)
+
+detailed_logging_callback = DetailedLoggingCallback(test_data=test_data)
+input_shape = (32, 224, 224, 3)
+model = tf.keras.models.Sequential(
+    [
+        data_augmentation,
+        tf.keras.layers.Conv2D(
+            filters=64, kernel_size=3, activation="relu", input_shape=input_shape
+        ),
+        tf.keras.layers.Conv2D(64, 3, activation="relu"),
+        tf.keras.layers.MaxPool2D(pool_size=2, padding="valid"),
+        tf.keras.layers.Conv2D(64, 3, activation="relu"),
+        tf.keras.layers.MaxPool2D(2),
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(NUM_CLASSES, activation="softmax"),
     ]
 )
+model.build(input_shape=input_shape)
 
-# Compile the model
+model.summary()
+
+
 model.compile(
-    optimizer=Adam(learning_rate=0.001),
     loss="categorical_crossentropy",
-    metrics=["accuracy", tf.keras.metrics.Precision(), tf.keras.metrics.Recall()],
+    optimizer=tf.keras.optimizers.Adam(),
+    metrics=["accuracy"],
 )
-
-# Data preprocessing and augmentation
-train_datagen = ImageDataGenerator(
-    rescale=1.0 / 255,
-    rotation_range=20,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    shear_range=0.2,
-    zoom_range=0.2,
-    horizontal_flip=True,
-    fill_mode="nearest",
-)
-
-# Data preprocessing and augmentation
-train_datagen = ImageDataGenerator(
-    rescale=1.0 / 255,
-    rotation_range=20,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    shear_range=0.2,
-    zoom_range=0.2,
-    vertical_flip=True,
-    horizontal_flip=False,
-    fill_mode="nearest",
-)
-
-# Load data
-train_data = train_datagen.flow_from_directory(
-    train_dir, target_size=IMG_SIZE, batch_size=BATCH_SIZE, class_mode="categorical"
-)
-# Đánh giá mô hình trên tập test
-test_datagen = ImageDataGenerator(rescale=1.0 / 255)
-
-# Load tập test
-test_data = test_datagen.flow_from_directory(
-    test_dir, target_size=IMG_SIZE, batch_size=BATCH_SIZE, class_mode="categorical"
-)
-detailed_logging_callback = DetailedLoggingCallback(test_data=test_data)
-# Train the model
 history = model.fit(
     train_data,
-    epochs=EPOCHS,  # Adjust epochs based on your needs
-    verbose=1,
-    callbacks=[detailed_logging_callback],
+    epochs=10,
+    validation_data=test_data,
+    validation_steps=len(test_data),
+    callbacks=[
+        detailed_logging_callback,
+    ],
 )
 
-model.save("./ResNet50_model.keras")
+
+model.save("./CNN_kaggle.keras")
