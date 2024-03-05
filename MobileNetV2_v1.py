@@ -54,7 +54,7 @@ class DetailedLoggingCallback(Callback):
         f1_test = f1_score(y_true_test, y_pred_test, average="macro")
         mcc_test = matthews_corrcoef(y_true_test, y_pred_test)
         cmc_test = cohen_kappa_score(y_true_test, y_pred_test)
-      
+
         cm_test = confusion_matrix(y_true_test, y_pred_test)
         report_test = classification_report(
             y_true_test, y_pred_test, digits=5, output_dict=True
@@ -63,6 +63,13 @@ class DetailedLoggingCallback(Callback):
         print(cm_test)
         print("Classification Report (Test):")
         print(report_test)
+        print("Test Accuracy:", test_accuracy)
+        print("Test Loss:", test_loss)
+        print("Test Precision:", precision_test)
+        print("Test Recall:", recall_test)
+        print("Test F1-Score:", f1_test)
+        print("Test MCC:", mcc_test)
+        print("Test CMC:", cmc_test)
         self.epoch_cm_logs.append((epoch + 1, cm_test))
         self.epoch_report.append((epoch + 1, report_test))
         # Save information to temporary list with values separated by tab
@@ -97,9 +104,11 @@ class DetailedLoggingCallback(Callback):
 
 
 IMG_SIZE = (224, 224)
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 NUM_CLASSES = 5
 EPOCHS = 100
+LEARNING_RATE = 1e-5
+PATIENCE = 3
 # Create paths to data directories
 train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
@@ -161,12 +170,18 @@ test_data = test_datagen.flow_from_directory(
 )
 
 detailed_logging_callback = DetailedLoggingCallback(test_data=test_data)
+early_stopping_callback = EarlyStopping(
+    monitor="val_loss",
+    mode="min",
+    patience=PATIENCE,
+    restore_best_weights=True,
+)
 # Train the model
 history = model.fit(
     train_data,
     epochs=EPOCHS,  # Adjust epochs based on your needs
     verbose=1,
-    callbacks=[detailed_logging_callback],
+    callbacks=[detailed_logging_callback, early_stopping_callback],
 )
 
 

@@ -4,6 +4,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import layers, models
 from sklearn.utils import class_weight
+from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.optimizers import Adam
 import numpy as np
 import datetime
@@ -20,7 +21,7 @@ from sklearn.metrics import (
 
 
 class DetailedLoggingCallback(Callback):
-    def __init__(self, test_data, file_prefix="MobileNet_v3_v2_optAdam_lr0.001_bs32"):
+    def __init__(self, test_data, file_prefix="MobileNet_baibao_optAdam_lr0.001_bs32"):
         super(DetailedLoggingCallback, self).__init__()
         self.test_data = test_data
         current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -59,6 +60,14 @@ class DetailedLoggingCallback(Callback):
         print(cm_test)
         print("Classification Report (Test):")
         print(report_test)
+        print("Test Accuracy:", test_accuracy)
+        print("Test Loss:", test_loss)
+        print("Test Precision:", precision_test)
+        print("Test Recall:", recall_test)
+        print("Test F1-Score:", f1_test)
+        print("Test MCC:", mcc_test)
+        print("Test CMC:", cmc_test)
+
         self.epoch_cm_logs.append((epoch + 1, cm_test))
         self.epoch_report.append((epoch + 1, report_test))
         # Save information to temporary list with values separated by tab
@@ -95,7 +104,9 @@ class DetailedLoggingCallback(Callback):
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 16
 NUM_CLASSES = 5
-EPOCHS = 50
+EPOCHS = 80
+LEARNING_RATE = 1e-5
+PATIENCE = 3
 # Create paths to data directories
 train_dir = "./Guava_Dataset/Train"
 test_dir = "./Guava_Dataset/Test"
@@ -107,19 +118,24 @@ base_model = MobileNet(
 
 
 # Mở đóng băng một số lớp cuối cùng của mô hình
-for layer in base_model.layers[-10:]:
-    layer.trainable = True
+for layer in base_model.layers:
+    layer.trainable = False
 
 
-# Add custom layers on top of the base model
-# Chỉnh số lượng lớp của lớp cuối cùng từ 8 thành 5
-NUM_CLASSES = 5
 model = models.Sequential(
     [
         base_model,
+        layers.MaxPooling2D(),  # Add max pooling layer
         layers.GlobalAveragePooling2D(),
-        layers.Dense(1024, activation="relu"),
+        layers.BatchNormalization(),  # Add batch normalization layer
         layers.Dropout(0.5),
+        layers.Dense(1024, activation="relu"),
+        layers.BatchNormalization(),  # Add batch normalization layer
+        layers.Dropout(0.5),
+        layers.Dense(512, activation="relu"),  # Add additional dense layer
+        layers.BatchNormalization(),  # Add batch normalization layer
+        layers.Dropout(0.5),
+        layers.Dense(256, activation="relu"),  # Add additional dense layer
         layers.Dense(NUM_CLASSES, activation="softmax"),
     ]
 )
@@ -140,7 +156,7 @@ train_datagen = ImageDataGenerator(
     shear_range=0.2,
     zoom_range=0.2,
     vertical_flip=True,
-    horizontal_flip=True,
+    horizontal_flip=False,
     fill_mode="nearest",
 )
 
@@ -157,17 +173,22 @@ test_data = test_datagen.flow_from_directory(
 )
 
 detailed_logging_callback = DetailedLoggingCallback(test_data=test_data)
-
+early_stopping_callback = EarlyStopping(
+    monitor="val_loss",
+    mode="min",
+    patience=PATIENCE,
+    restore_best_weights=True,
+)
 # Train the model
 history = model.fit(
     train_data,
     epochs=EPOCHS,  # Adjust epochs based on your needs
     verbose=1,
-    callbacks=[detailed_logging_callback],
+    callbacks=[detailed_logging_callback, early_stopping_callback],
 )
 
 
-model.save("./MobileNet_v3_v2.keras")
+model.save("./MobileNet_baibao.keras")
 
 
 # sử dụng MobileNet
