@@ -62,6 +62,13 @@ class DetailedLoggingCallback(Callback):
         print(cm_test)
         print("Classification Report (Test):")
         print(report_test)
+        print("Test Accuracy:", test_accuracy)
+        print("Test Loss:", test_loss)
+        print("Test Precision:", precision_test)
+        print("Test Recall:", recall_test)
+        print("Test F1-Score:", f1_test)
+        print("Test MCC:", mcc_test)
+        print("Test CMC:", cmc_test)
         self.epoch_cm_logs.append((epoch + 1, cm_test))
         self.epoch_report.append((epoch + 1, report_test))
         # Save information to temporary list with values separated by tab
